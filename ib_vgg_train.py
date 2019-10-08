@@ -98,11 +98,14 @@ def main():
         except:
             pass
         # match the state dicts
-        ib_keys, vgg_keys = model.state_dict().keys(), state_dict['state_dict'].keys()
+        ib_keys, vgg_keys = list(model.state_dict().keys()), list(state_dict['state_dict'].keys())
+        ib_group_size = 10 if any(['num_batches_tracked' in key for key in ib_keys]) else 9
         for i in range(13):
             for j in range(6):
-                model.state_dict()[ib_keys[i*9+j]].copy_(state_dict['state_dict'][vgg_keys[i*6+j]])
-        ib_offset, vgg_offset = 9*13, 6*13
+                ib_key = ib_keys[i*ib_group_size+j]
+                vgg_key = vgg_keys[i*6+j]
+                model.state_dict()[ib_key].copy_(state_dict['state_dict'][vgg_key])
+        ib_offset, vgg_offset = ib_group_size*13, 6*13
         for i in range(3):
             for j in range(2):
                 model.state_dict()[ib_keys[ib_offset + i*5 + j]].copy_(state_dict['state_dict'][vgg_keys[vgg_offset + i*2+j]])
@@ -113,10 +116,11 @@ def main():
         print('loaded pretraind model with acc {}'.format(state_dict['prec1']))
         # match the state dicts
         ib_keys, vgg_keys = list(model.state_dict().keys()), list(state_dict['state_dict'].keys())
+        ib_group_size = 10 if any(['num_batches_tracked' in key for key in ib_keys]) else 9
         for i in range(13):
             for j in range(6):
-                model.state_dict()[ib_keys[i*9+j]].copy_(state_dict['state_dict'][ib_keys[i*9+j]])
-        ib_offset, vgg_offset = 9*13, 6*13
+                model.state_dict()[ib_keys[i*ib_group_size+j]].copy_(state_dict['state_dict'][ib_keys[i*ib_group_size+j]])
+        ib_offset, vgg_offset = ib_group_size*13, 6*13
         for i in range(2):
             for j in range(2):
                 model.state_dict()[ib_keys[ib_offset + i*5 + j]].copy_(state_dict['state_dict'][vgg_keys[ib_offset + i*5 + j]])
@@ -181,7 +185,7 @@ def train(train_loader, model, criterion, optimizer, epoch, writer):
         # measure data loading time
         data_time.update(time.time() - end)
 
-        target = target.cuda(async=True)
+        target = target.cuda()
         input_var = torch.autograd.Variable(input.cuda())
         target_var = torch.autograd.Variable(target)
 
@@ -210,9 +214,9 @@ def train(train_loader, model, criterion, optimizer, epoch, writer):
 
         # measure accuracy and record loss
         prec1 = accuracy(output.data, target)[0]
-        losses.update(ce_loss.data[0], input.size(0))
-        kld_meter.update(kl_total.data[0], input.size(0))
-        top1.update(prec1[0], input.size(0))
+        losses.update(ce_loss.item(), input.size(0))
+        kld_meter.update(kl_total.item(), input.size(0))
+        top1.update(prec1.item(), input.size(0))
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -261,7 +265,7 @@ def validate(val_loader, model, criterion, epoch, writer, masks=None):
 
     end = time.time()
     for i, (input, target) in enumerate(val_loader):
-        target = target.cuda(async=True)
+        target = target.cuda()
         input_var = torch.autograd.Variable(input).cuda()
         target_var = torch.autograd.Variable(target)
 
@@ -271,8 +275,8 @@ def validate(val_loader, model, criterion, epoch, writer, masks=None):
 
         # measure accuracy and record loss
         prec1 = accuracy(output.data, target)[0]
-        losses.update(loss.data[0], input.size(0))
-        top1.update(prec1[0], input.size(0))
+        losses.update(loss.item(), input.size(0))
+        top1.update(prec1.item(), input.size(0))
 
         # measure elapsed time
         batch_time.update(time.time() - end)

@@ -102,3 +102,7 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+baseline*
+ib_vgg_chk*
+tb_ib_vgg*
+data*
