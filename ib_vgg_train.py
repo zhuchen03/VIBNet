@@ -11,6 +11,7 @@ from torch.autograd import Variable
 from tensorboardX import SummaryWriter
 
 from ib_vgg import *
+import pdb
 
 def main():
     if args.ib_lr == -1:
@@ -28,6 +29,7 @@ def main():
                                      std=[0.229, 0.224, 0.225])
 
     n_cls = 10 if args.data_set == 'cifar10' else 100
+    args.n_cls = n_cls
     dset_string = 'datasets.CIFAR10' if args.data_set == 'cifar10' else 'datasets.CIFAR100'
     train_tfms = [transforms.ToTensor(), normalize]
     if not args.ban_flip:
@@ -118,13 +120,20 @@ def main():
         ib_keys, vgg_keys = list(model.state_dict().keys()), list(state_dict['state_dict'].keys())
         ib_group_size = 10 if any(['num_batches_tracked' in key for key in ib_keys]) else 9
         vgg_group_size = 10 if any(['num_batches_tracked' in key for key in vgg_keys]) else 9
-        for i in range(13):
+        vgg_layers = 16 if args.cfg == "G5" else 13
+        for i in range(vgg_layers):
             for j in range(6):
                 model.state_dict()[ib_keys[i*ib_group_size+j]].copy_(state_dict['state_dict'][ib_keys[i*ib_group_size+j]])
-        ib_offset, vgg_offset = ib_group_size*13, 6*13
-        for i in range(2):
+        ib_offset, vgg_offset = ib_group_size*vgg_layers, 6*vgg_layers
+        n_fc = 1 if args.cfg == "G5" else 2
+        for i in range(n_fc):
             for j in range(2):
-                model.state_dict()[ib_keys[ib_offset + i*5 + j]].copy_(state_dict['state_dict'][vgg_keys[vgg_group_size*13 + i*5 + j]])
+                # our checkpoints for CIFAR10 has an issue that doesn't affect the resules:
+                # the final FC layer has 100 classes, but taking only the first 10 rows doesn't affect the results
+                weight_to_load = state_dict['state_dict'][vgg_keys[vgg_group_size*vgg_layers + i*5 + j]]
+                if i == n_fc - 1:
+                    weight_to_load = weight_to_load[:n_cls]
+                model.state_dict()[ib_keys[ib_offset + i*5 + j]].copy_(weight_to_load)
 
     if args.val:
         model.eval()
