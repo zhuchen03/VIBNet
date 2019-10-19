@@ -117,13 +117,14 @@ def main():
         # match the state dicts
         ib_keys, vgg_keys = list(model.state_dict().keys()), list(state_dict['state_dict'].keys())
         ib_group_size = 10 if any(['num_batches_tracked' in key for key in ib_keys]) else 9
+        vgg_group_size = 10 if any(['num_batches_tracked' in key for key in vgg_keys]) else 9
         for i in range(13):
             for j in range(6):
                 model.state_dict()[ib_keys[i*ib_group_size+j]].copy_(state_dict['state_dict'][ib_keys[i*ib_group_size+j]])
         ib_offset, vgg_offset = ib_group_size*13, 6*13
         for i in range(2):
             for j in range(2):
-                model.state_dict()[ib_keys[ib_offset + i*5 + j]].copy_(state_dict['state_dict'][vgg_keys[ib_offset + i*5 + j]])
+                model.state_dict()[ib_keys[ib_offset + i*5 + j]].copy_(state_dict['state_dict'][vgg_keys[vgg_group_size*13 + i*5 + j]])
 
     if args.val:
         model.eval()
