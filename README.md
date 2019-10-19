@@ -15,6 +15,9 @@ If you find this code useful in your research you could cite
 }
 ```
 
+# Update on Oct 18, 2019
+Fixed some compatibility issue with PyTorch 1.2.0. 
+
 # Prerequisites
 The experiments can be reproduced with PyTorch 0.3.1 and CUDA 9.0 on Ubuntu 16.04. Here is one approach to set up:
 
