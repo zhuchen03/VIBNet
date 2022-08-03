@@ -14,7 +14,7 @@ def reparameterize(mu, logvar, batch_size, cuda=False, sampling=True):
     # output dim: batch_size * dim
     if sampling:
         std = logvar.mul(0.5).exp_()
-        eps = torch.FloatTensor(batch_size, std.size(0)).cuda(mu.get_device()).normal_()
+        eps = torch.FloatTensor(batch_size, std.size(0)).to(mu).normal_()
         eps = Variable(eps)
         return mu.view(1, -1) + eps * std.view(1, -1)
     else:
